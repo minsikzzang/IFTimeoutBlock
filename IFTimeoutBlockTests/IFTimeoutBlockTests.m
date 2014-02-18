@@ -185,4 +185,35 @@
   [[NSThread currentThread] cancel];
 }
 
+- (void)testMultipleAsync {
+  __block int done = 0;
+  const int count = 10;
+  for (int i = 0; i < count; ++i) {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+      IFTimeoutBlock *block = [[IFTimeoutBlock alloc] init];
+      
+      IFTimeoutHandler timeoutBlock = ^(IFTimeoutBlock *block) {
+        int aa = 1;
+        aa++;
+      };
+      
+      IFExecutionBlock executionBlock = ^(IFTimeoutBlock *block) {
+        sleep(2);
+        [block signal];
+        done++;
+      };
+      
+      [block setExecuteAsyncWithTimeout:1
+                            WithHandler:timeoutBlock
+                      andExecutionBlock:executionBlock];
+    });
+  }
+  
+  while (done < count) {
+    [[NSRunLoop currentRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:1]];
+  }
+  
+  XCTAssertEqual(done, count);
+}
+
 @end
